@@ -87,6 +87,15 @@ class StructuredClient:
             "max_tokens": max_tokens if max_tokens is not None else 8192,
         }
 
+        # Disable Gemini "thinking" tokens for structured-output calls. Gemini
+        # 2.5-flash burns ~1900 reasoning tokens before emitting output, which
+        # truncates JSON mid-string under max_tokens. We don't need a chain of
+        # thought to fill a Pydantic schema — the schema is the constraint.
+        # LiteLLM's normalized `reasoning_effort="minimal"` maps to Gemini's
+        # `thinking_config.thinking_budget=0` for 2.5-flash.
+        if "gemini" in self.model.lower():
+            kwargs["reasoning_effort"] = "minimal"
+
         import time
 
         for attempt in range(4):
