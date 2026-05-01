@@ -47,12 +47,12 @@
 
 ---
 
-## Phase 4 — Observability (1 day)
+## Phase 4 — Observability (1 day) ✅
 
-- [ ] 22. Langfuse SDK in orchestrator + per-agent spans
-- [ ] 23. `GET /traces/{run_id}` endpoint
-- [ ] 24. `AgentTimeline.tsx` — live progress
-- [ ] 25. `TraceViewer.tsx` — collapsible span tree
+- [x] 22. In-memory trace store + Langfuse passthrough (no-op when key absent) + per-agent spans
+- [x] 23. `GET /traces/{run_id}` + `GET /traces` endpoints
+- [x] 24. `AgentTimeline.tsx` — span bars with durations + metadata + status dots
+- [ ] 25. `TraceViewer.tsx` — folded into AgentTimeline for now (collapsible tree deferred)
 
 ---
 

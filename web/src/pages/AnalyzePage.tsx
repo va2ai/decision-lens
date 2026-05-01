@@ -1,11 +1,11 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useAnalyze } from "../hooks/useAnalyze";
-import type { AnalysisReport } from "../types/api";
+import type { AnalysisResponse } from "../types/api";
 
 export function AnalyzePage({
   onComplete,
 }: {
-  onComplete: (report: AnalysisReport) => void;
+  onComplete: (response: AnalysisResponse) => void;
 }) {
   const [text, setText] = useState("");
   const mutation = useAnalyze();

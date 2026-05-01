@@ -97,3 +97,29 @@ export const AnalyzeRequest = z.object({
   text: z.string().min(1),
 });
 export type AnalyzeRequest = z.infer<typeof AnalyzeRequest>;
+
+export const AnalysisResponse = z.object({
+  run_id: z.string(),
+  report: AnalysisReport,
+});
+export type AnalysisResponse = z.infer<typeof AnalysisResponse>;
+
+export const SpanView = z.object({
+  name: z.string(),
+  started_at: z.number(),
+  ended_at: z.number().nullable(),
+  duration_ms: z.number().nullable(),
+  status: z.enum(["ok", "error", "running"]),
+  error: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+});
+export type SpanView = z.infer<typeof SpanView>;
+
+export const TraceView = z.object({
+  run_id: z.string(),
+  started_at: z.number(),
+  ended_at: z.number().nullable(),
+  duration_ms: z.number().nullable(),
+  spans: z.array(SpanView),
+});
+export type TraceView = z.infer<typeof TraceView>;

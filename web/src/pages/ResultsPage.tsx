@@ -1,4 +1,5 @@
 import type { AnalysisReport } from "../types/api";
+import { AgentTimeline } from "../components/AgentTimeline";
 import { CitationBadge } from "../components/CitationBadge";
 import { EvidenceList } from "../components/EvidenceList";
 import { FindingsPanel } from "../components/FindingsPanel";
@@ -13,13 +14,16 @@ const TAB_IDS = {
   findings: "findings",
   strategy: "strategy",
   flags: "flags",
+  trace: "trace",
 } as const;
 
 export function ResultsPage({
   report,
+  runId,
   onReset,
 }: {
   report: AnalysisReport;
+  runId: string;
   onReset: () => void;
 }) {
   const tabs = [
@@ -28,6 +32,7 @@ export function ResultsPage({
     { id: TAB_IDS.findings, label: "Findings", count: report.findings.length },
     { id: TAB_IDS.strategy, label: "Strategy", count: report.strategy.length },
     { id: TAB_IDS.flags, label: "Flags", count: report.critic_flags.length },
+    { id: TAB_IDS.trace, label: "Trace" },
   ];
 
   return (
@@ -122,9 +127,21 @@ export function ResultsPage({
         <StrategyPanel items={report.strategy} />
       </section>
 
-      <section id={TAB_IDS.flags} className="scroll-mt-20 space-y-3 pb-20">
+      <section id={TAB_IDS.flags} className="scroll-mt-20 space-y-3">
         <h2 className="text-lg font-semibold text-zinc-900">Critic flags</h2>
         <FlagsList flags={report.critic_flags} />
+      </section>
+
+      <section id={TAB_IDS.trace} className="scroll-mt-20 space-y-3 pb-20">
+        <h2 className="text-lg font-semibold text-zinc-900">Agent timeline</h2>
+        <p className="text-xs text-zinc-500">
+          Span timing recorded by the in-memory trace store. Set
+          <code className="mx-1 rounded bg-zinc-100 px-1 font-mono">LANGFUSE_PUBLIC_KEY</code>
+          to also forward to Langfuse.
+        </p>
+        <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+          <AgentTimeline runId={runId} />
+        </div>
       </section>
     </div>
   );

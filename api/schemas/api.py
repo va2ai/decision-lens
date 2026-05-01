@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
-from uuid import UUID
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -21,8 +20,28 @@ class AnalysisRequest(BaseModel):
 class AnalysisResponse(BaseModel):
     """POST /analyze response."""
 
-    run_id: UUID
+    run_id: str
     report: AnalysisReport
+
+
+class SpanView(BaseModel):
+    name: str
+    started_at: float
+    ended_at: float | None
+    duration_ms: float | None
+    status: str
+    error: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class TraceView(BaseModel):
+    """GET /traces/{run_id} response."""
+
+    run_id: str
+    started_at: float
+    ended_at: float | None
+    duration_ms: float | None
+    spans: list[SpanView]
 
 
 class ErrorResponse(BaseModel):

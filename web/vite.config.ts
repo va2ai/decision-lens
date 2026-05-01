@@ -8,6 +8,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/analyze": "http://localhost:8000",
+      "/traces": "http://localhost:8000",
     },
   },
 });

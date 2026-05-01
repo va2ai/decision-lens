@@ -8,10 +8,15 @@ Failure semantics:
   - Critic: hard abort if it itself errors. Respects ctx.poisoned by blocking
     every finding.
   - Report: always runs, propagates all warnings.
+
+Tracing:
+  Each node opens a span on the current Trace, recorded via contextvars so
+  pure-function LangGraph nodes don't need to thread the trace through state.
 """
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from typing import Protocol
 
 from langgraph.graph import END, StateGraph
@@ -22,6 +27,7 @@ from api.agents import intake as intake_agent
 from api.agents import reasoning as reasoning_agent
 from api.agents import report as report_agent
 from api.agents import retrieval as retrieval_agent
+from api.observability import Trace, get_trace_store, span
 from api.providers.llm import get_client
 from api.retrieval.store import get_store
 from api.schemas.pipeline import (
@@ -37,20 +43,41 @@ class _Client(Protocol):
     def structured(self, **kwargs: object) -> object: ...
 
 
+_current_trace: ContextVar[Trace | None] = ContextVar("current_trace", default=None)
+
+
+def _trace() -> Trace | None:
+    return _current_trace.get()
+
+
 # ---------------------------------------------------------------------------
 # Node wrappers
 # ---------------------------------------------------------------------------
 
 
 def _intake_node(state: PipelineContext) -> dict:
-    out = intake_agent.run(state.raw_text, client=get_client())
+    t = _trace()
+    if t is None:
+        out = intake_agent.run(state.raw_text, client=get_client())
+        return {"intake": out}
+    with span(t, "intake", input_chars=len(state.raw_text)) as s:
+        out = intake_agent.run(state.raw_text, client=get_client())
+        s.metadata["doc_type"] = out.doc_type.value
+        s.metadata["intake_warnings"] = len(out.intake_warnings)
     return {"intake": out}
 
 
 def _extraction_node(state: PipelineContext) -> dict:
     assert state.intake is not None
+    t = _trace()
     try:
-        out = extraction_agent.run(state.intake, client=get_client())
+        if t is None:
+            out = extraction_agent.run(state.intake, client=get_client())
+        else:
+            with span(t, "extraction") as s:
+                out = extraction_agent.run(state.intake, client=get_client())
+                s.metadata["issues"] = len(out.issues)
+                s.metadata["evidence"] = len(out.evidence)
         return {"extraction": out}
     except Exception as e:  # noqa: BLE001
         return {
@@ -63,10 +90,16 @@ def _extraction_node(state: PipelineContext) -> dict:
 def _retrieval_node(state: PipelineContext) -> dict:
     if state.extraction is None or not state.extraction.issues:
         return {"retrieval": RetrievalOutput(references=[], retrieval_warnings=["No issues."])}
+    t = _trace()
     try:
         store = get_store()
         store.ensure_loaded()
-        out = retrieval_agent.run(state.extraction, store=store)
+        if t is None:
+            out = retrieval_agent.run(state.extraction, store=store)
+        else:
+            with span(t, "retrieval", issue_count=len(state.extraction.issues)) as s:
+                out = retrieval_agent.run(state.extraction, store=store)
+                s.metadata["references"] = len(out.references)
         return {"retrieval": out}
     except Exception as e:  # noqa: BLE001
         return {
@@ -79,8 +112,17 @@ def _retrieval_node(state: PipelineContext) -> dict:
 def _reasoning_node(state: PipelineContext) -> dict:
     if state.extraction is None or state.retrieval is None:
         return {"reasoning": ReasoningOutput(findings=[])}
+    t = _trace()
     try:
-        out = reasoning_agent.run(state.extraction, state.retrieval, client=get_client())
+        if t is None:
+            out = reasoning_agent.run(state.extraction, state.retrieval, client=get_client())
+        else:
+            with span(t, "reasoning") as s:
+                out = reasoning_agent.run(state.extraction, state.retrieval, client=get_client())
+                s.metadata["findings"] = len(out.findings)
+                s.metadata["dropped_for_dangling_ids"] = (
+                    "see_findings"  # post-filter is internal to reasoning.run
+                )
         return {"reasoning": out}
     except Exception as e:  # noqa: BLE001
         return {
@@ -94,18 +136,42 @@ def _critic_node(state: PipelineContext) -> dict:
     if state.reasoning is None or state.retrieval is None:
         from api.schemas.pipeline import CriticOutput
 
-        return {"critic": CriticOutput(approved_finding_indices=[], flags=[], overall_faithfulness_score=0.0)}
-    out = critic_agent.run(
-        state.reasoning,
-        state.retrieval,
-        client=get_client(),
-        poisoned=state.poisoned,
-    )
+        return {
+            "critic": CriticOutput(
+                approved_finding_indices=[], flags=[], overall_faithfulness_score=0.0
+            )
+        }
+    t = _trace()
+    if t is None:
+        out = critic_agent.run(
+            state.reasoning,
+            state.retrieval,
+            client=get_client(),
+            poisoned=state.poisoned,
+        )
+    else:
+        with span(t, "critic", poisoned=state.poisoned) as s:
+            out = critic_agent.run(
+                state.reasoning,
+                state.retrieval,
+                client=get_client(),
+                poisoned=state.poisoned,
+            )
+            s.metadata["approved"] = len(out.approved_finding_indices)
+            s.metadata["flags"] = len(out.flags)
+            s.metadata["faithfulness"] = out.overall_faithfulness_score
     return {"critic": out}
 
 
 def _report_node(state: PipelineContext) -> dict:
-    out = report_agent.run(state)
+    t = _trace()
+    if t is None:
+        out = report_agent.run(state)
+    else:
+        with span(t, "report") as s:
+            out = report_agent.run(state)
+            s.metadata["findings"] = len(out.findings)
+            s.metadata["citations"] = len(out.citations)
     return {"final_report": out}
 
 
@@ -135,13 +201,26 @@ def build_graph() -> object:
 
 def run_analysis(raw_text: str) -> AnalysisReport:
     """End-to-end pipeline invocation. Returns the assembled AnalysisReport."""
-    graph = build_graph()
-    initial = PipelineContext(raw_text=raw_text)
-    final = graph.invoke(initial)
-    if isinstance(final, PipelineContext):
-        ctx = final
-    else:
-        ctx = PipelineContext.model_validate(final)
-    if ctx.final_report is None:
-        raise RuntimeError("Pipeline did not produce a final_report")
-    return ctx.final_report
+    report, _trace_obj = run_analysis_traced(raw_text)
+    return report
+
+
+def run_analysis_traced(raw_text: str) -> tuple[AnalysisReport, Trace]:
+    """Same as run_analysis, but also returns the Trace for the run."""
+    store = get_trace_store()
+    trace = store.start()
+    token = _current_trace.set(trace)
+    try:
+        graph = build_graph()
+        initial = PipelineContext(raw_text=raw_text)
+        final = graph.invoke(initial)
+        if isinstance(final, PipelineContext):
+            ctx = final
+        else:
+            ctx = PipelineContext.model_validate(final)
+        if ctx.final_report is None:
+            raise RuntimeError("Pipeline did not produce a final_report")
+        return ctx.final_report, trace
+    finally:
+        store.end(trace)
+        _current_trace.reset(token)
