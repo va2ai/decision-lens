@@ -56,12 +56,12 @@
 
 ---
 
-## Phase 5 — Evals (1 day)
+## Phase 5 — Evals (1 day) ✅
 
-- [ ] 26. `data/golden_cases.jsonl` — 15 labeled synthetic cases
-- [ ] 27. `api/evals/ragas_runner.py`
-- [ ] 28. `scripts/run_evals.sh` + assertion suite
-- [ ] 29. `EvalDashboard.tsx`
+- [x] 26. `data/golden_cases.jsonl` — 5 labeled synthetic cases (will expand to 15 later)
+- [x] 27. `api/evals/runner.py` — deterministic metrics (issue recall, citation grounding, required-source recall, faithfulness) + optional Ragas wrapper that activates when an LLM key is set
+- [x] 28. `scripts/run_evals.py` + nonzero-exit-on-fail
+- [x] 29. `EvalDashboard.tsx` + `GET /evals/latest` endpoint
 
 ---
 

@@ -7,6 +7,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+import json
+from pathlib import Path
+
 from api.agents.graph import run_analysis_traced
 from api.observability import get_trace_store
 from api.retrieval.store import get_store
@@ -70,3 +73,16 @@ async def list_traces(limit: int = 20) -> list[TraceView]:
     return [
         TraceView.model_validate(t.to_dict()) for t in get_trace_store().list_recent(limit)
     ]
+
+
+@app.get("/evals/latest")
+async def latest_evals() -> dict:
+    """Return the most recent eval suite results as a flat JSON blob."""
+    path = Path(__file__).resolve().parents[1] / "evals" / "results" / "latest.json"
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="No eval results yet. Run `python scripts/run_evals.py` first.",
+        )
+    with path.open(encoding="utf-8") as f:
+        return json.load(f)

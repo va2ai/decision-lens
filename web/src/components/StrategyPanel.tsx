@@ -22,7 +22,10 @@ export function StrategyPanel({ items }: { items: StrategyRecommendation[] }) {
           >
             {s.priority}
           </span>
-          <p className="text-sm text-zinc-800">{s.recommendation}</p>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-zinc-900">{s.recommended_action}</p>
+            <p className="mt-1 text-sm text-zinc-600">{s.rationale}</p>
+          </div>
         </li>
       ))}
     </ol>

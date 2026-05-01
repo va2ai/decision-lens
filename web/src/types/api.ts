@@ -45,11 +45,11 @@ export type EvidenceItem = z.infer<typeof EvidenceItem>;
 
 export const Citation = z.object({
   source_id: z.string(),
-  source_title: z.string(),
+  title: z.string(),
   authority_type: AuthorityType,
   passage: z.string(),
   url: z.string().nullable().optional(),
-  validated: z.boolean(),
+  validated: z.boolean().default(false),
 });
 export type Citation = z.infer<typeof Citation>;
 
@@ -62,9 +62,11 @@ export const ReportFinding = z.object({
 export type ReportFinding = z.infer<typeof ReportFinding>;
 
 export const StrategyRecommendation = z.object({
-  finding_index: z.number(),
-  recommendation: z.string(),
+  issue_index: z.number(),
+  recommended_action: z.string(),
+  rationale: z.string(),
   priority: z.enum(["critical", "important", "optional"]),
+  supporting_source_ids: z.array(z.string()).default([]),
 });
 export type StrategyRecommendation = z.infer<typeof StrategyRecommendation>;
 
@@ -77,8 +79,8 @@ export const CriticFlag = z.object({
 export type CriticFlag = z.infer<typeof CriticFlag>;
 
 export const AnalysisReport = z.object({
+  report_id: z.string(),
   doc_type: DocumentType,
-  parties: z.record(z.string(), z.string()),
   issues: z.array(DocumentIssue),
   evidence: z.array(EvidenceItem),
   findings: z.array(ReportFinding),

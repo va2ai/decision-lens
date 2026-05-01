@@ -4,8 +4,10 @@ import type { AnalysisResponse } from "../types/api";
 
 export function AnalyzePage({
   onComplete,
+  onShowEvals,
 }: {
   onComplete: (response: AnalysisResponse) => void;
+  onShowEvals: () => void;
 }) {
   const [text, setText] = useState("");
   const mutation = useAnalyze();
@@ -29,8 +31,17 @@ export function AnalyzePage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       <header className="mb-6">
-        <div className="text-xs font-medium uppercase tracking-wide text-blue-600">
-          Decision Lens
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-medium uppercase tracking-wide text-blue-600">
+            Decision Lens
+          </div>
+          <button
+            type="button"
+            onClick={onShowEvals}
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+          >
+            Eval suite →
+          </button>
         </div>
         <h1 className="mt-1 text-3xl font-semibold text-zinc-900">
           Analyze a decision document
