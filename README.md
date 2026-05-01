@@ -104,6 +104,20 @@ Five golden cases scored on five deterministic metrics that need **no LLM**:
 
 If `OPENAI_API_KEY` (or `LANGFUSE_PUBLIC_KEY`) is set **and** `pip install -e ".[evals]"` has been run, the runner additionally invokes Ragas's `faithfulness` LLM-as-judge metric and surfaces it in the dashboard. Without those, only the deterministic metrics run — the suite is still meaningful in CI.
 
+## How we prevent ungrounded claims
+
+Three concentric layers, each tested independently — a hallucinated citation has to defeat *all three* to ship in a report. They run cheapest-first so the common failure (model invents a `[REG-PHANTOM]`) is rejected at zero token cost.
+
+| Layer | Where | What it enforces |
+|---|---|---|
+| 1. **Schema contract** (Pydantic, no LLM) | `api/schemas/pipeline.py` — `ReasoningFinding.supporting_source_ids: list[str] = Field(min_length=1)` | A finding without **any** cited source can never be constructed. The Instructor adapter feeds violations back to the LLM as a validation error so the model retries with a citation. |
+| 2. **Reasoning post-filter** (deterministic, no LLM) | `api/agents/reasoning.py` — drops findings whose `source_id`s aren't in `RetrievalOutput.references`; partial overlaps keep only the grounded ids | A finding can't cite a source the retriever never returned. |
+| 3. **Critic deterministic guard** (no LLM) | `api/agents/critic.py` — `_deterministic_dangling_check` runs *before* the LLM critic and auto-blocks any surviving dangling-id finding with a `hallucination` flag | Belt-and-suspenders for whatever slips past layer 2 (e.g. when reasoning is stubbed in tests). |
+
+The load-bearing assertion is `tests/test_schemas.py::test_schema_rejects_finding_without_any_citation` — Pydantic's `min_length=1` is what every layer above it builds on. The hallucination-injection assertion `tests/test_critic.py::test_hallucination_injection_is_flagged_without_llm` proves layers 2–3 work even when an LLM is unavailable.
+
+The eval suite (`api/evals/runner.py`) measures the residual on real outputs: `citation_grounding` is the fraction of finding source_ids that resolved against retrieved citations — when it's not 1.0, something escaped the three layers and the run fails the eval.
+
 ## Architecture details
 
 ### Why six agents, not one prompt

@@ -55,13 +55,26 @@ def _trace() -> Trace | None:
 # ---------------------------------------------------------------------------
 
 
+def _prime_demo_client(client: object, *, raw_text: str | None = None,
+                        retrieved_ids: list[str] | None = None) -> None:
+    """If the active client is the DemoClient, hand it the per-request context
+    it needs to produce text/citation-aware canned outputs. No-op for the real
+    StructuredClient."""
+    if raw_text is not None and hasattr(client, "set_raw_text"):
+        client.set_raw_text(raw_text)  # type: ignore[attr-defined]
+    if retrieved_ids is not None and hasattr(client, "set_retrieved_ids"):
+        client.set_retrieved_ids(retrieved_ids)  # type: ignore[attr-defined]
+
+
 def _intake_node(state: PipelineContext) -> dict:
     t = _trace()
+    client = get_client()
+    _prime_demo_client(client, raw_text=state.raw_text)
     if t is None:
-        out = intake_agent.run(state.raw_text, client=get_client())
+        out = intake_agent.run(state.raw_text, client=client)
         return {"intake": out}
     with span(t, "intake", input_chars=len(state.raw_text)) as s:
-        out = intake_agent.run(state.raw_text, client=get_client())
+        out = intake_agent.run(state.raw_text, client=client)
         s.metadata["doc_type"] = out.doc_type.value
         s.metadata["intake_warnings"] = len(out.intake_warnings)
     return {"intake": out}
@@ -113,12 +126,17 @@ def _reasoning_node(state: PipelineContext) -> dict:
     if state.extraction is None or state.retrieval is None:
         return {"reasoning": ReasoningOutput(findings=[])}
     t = _trace()
+    client = get_client()
+    _prime_demo_client(
+        client,
+        retrieved_ids=[ref.source_id for ref in state.retrieval.references],
+    )
     try:
         if t is None:
-            out = reasoning_agent.run(state.extraction, state.retrieval, client=get_client())
+            out = reasoning_agent.run(state.extraction, state.retrieval, client=client)
         else:
             with span(t, "reasoning") as s:
-                out = reasoning_agent.run(state.extraction, state.retrieval, client=get_client())
+                out = reasoning_agent.run(state.extraction, state.retrieval, client=client)
                 s.metadata["findings"] = len(out.findings)
                 s.metadata["dropped_for_dangling_ids"] = (
                     "see_findings"  # post-filter is internal to reasoning.run

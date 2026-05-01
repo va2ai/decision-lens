@@ -40,7 +40,12 @@ def test_document_issue_rejects_invalid_confidence() -> None:
         )
 
 
-def test_reasoning_finding_requires_at_least_one_citation() -> None:
+def test_schema_rejects_finding_without_any_citation() -> None:
+    """Hard contract: a ReasoningFinding without at least one source_id never
+    constructs. Every other layer downstream (Critic deterministic guard,
+    Reasoning post-filter, eval `citation_grounding` metric) builds on top of
+    this — it is the foundation of the project's no-ungrounded-claims policy.
+    """
     with pytest.raises(ValidationError):
         ReasoningFinding(
             issue_index=0,

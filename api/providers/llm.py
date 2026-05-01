@@ -10,6 +10,7 @@ Why this layer exists:
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from typing import TypeVar
 
@@ -71,7 +72,17 @@ class StructuredClient:
 
 
 @lru_cache(maxsize=1)
-def get_client() -> StructuredClient:
+def get_client() -> "StructuredClient":
+    """Return the active client.
+
+    When `DEMO_MODE=1` the orchestrator runs the deterministic `DemoClient`
+    so the live demo path exercises real Retrieval, real Critic guard, real
+    tracing, and real frontend without burning an LLM key.
+    """
+    if os.environ.get("DEMO_MODE", "").strip() in {"1", "true", "yes"}:
+        from api.providers.demo_client import DemoClient
+
+        return DemoClient()  # type: ignore[return-value]
     s = get_settings()
     return StructuredClient(
         model=s.llm_model,
