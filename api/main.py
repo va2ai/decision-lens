@@ -1,32 +1,21 @@
-"""FastAPI entry point — Phase 0 stub.
-
-Returns a stubbed AnalysisReport so the schema contract is exercised end-to-end
-before any agents are wired. Phase 1 replaces the stub with a real LangGraph run.
-"""
+"""FastAPI entry point — wires the LangGraph pipeline behind POST /analyze."""
 
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.agents.graph import run_analysis
+from api.retrieval.store import get_store
 from api.schemas.api import AnalysisRequest, AnalysisResponse
-from api.schemas.pipeline import (
-    AnalysisReport,
-    AuthorityType,
-    Citation,
-    DocumentIssue,
-    DocumentType,
-    EvidenceItem,
-)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa: ARG001
-    # Phase 1+: warm provider client, load chroma collection, etc.
+    # Warm the retrieval store so the first request doesn't pay ingest cost.
+    get_store().ensure_loaded()
     yield
 
 
@@ -53,50 +42,13 @@ async def healthz() -> dict:
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze(req: AnalysisRequest) -> AnalysisResponse:
-    """Phase 0 stub — returns a deterministic stubbed report.
-
-    Confirms that the request and response schemas round-trip cleanly through
-    the FastAPI layer. Phase 1 replaces the body of this function with a real
-    pipeline invocation via api.agents.graph.run_analysis(req.raw_text).
-    """
+    """Run the full 6-agent pipeline against the submitted document."""
     if len(req.raw_text) < 50:
         raise HTTPException(status_code=400, detail="raw_text must be at least 50 chars")
-
-    run_id = uuid4()
-    stub = AnalysisReport(
-        doc_type=DocumentType.UNKNOWN,
-        generated_at=datetime.now(timezone.utc),
-        overall_confidence=0.0,
-        faithfulness_score=0.0,
-        issues=[
-            DocumentIssue(
-                issue_text="(stub) pipeline not yet wired",
-                decision="unclear",
-                stated_reason=None,
-                source_span=(0, min(len(req.raw_text), 100)),
-                confidence=0.0,
-            )
-        ],
-        evidence=[
-            EvidenceItem(
-                label="stub",
-                description="Phase 0 — replace with real extraction in Phase 2.",
-                source_type="missing",
-                favorability="missing",
-            )
-        ],
-        findings=[],
-        strategy=[],
-        citations=[
-            Citation(
-                source_id="STUB-001",
-                title="Phase 0 placeholder",
-                authority_type=AuthorityType.SECONDARY,
-                passage="No real retrieval has run yet.",
-            )
-        ],
-        critic_flags=[],
-        pipeline_warnings=["Phase 0 stub — agents not yet wired."],
-        prompt_version="stub:v0",
-    )
-    return AnalysisResponse(run_id=run_id, report=stub)
+    try:
+        report = run_analysis(req.raw_text)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"pipeline failure: {e}") from e
+    return AnalysisResponse(run_id=report.report_id, report=report)

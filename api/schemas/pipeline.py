@@ -215,6 +215,7 @@ class PipelineContext(BaseModel):
     retrieval: RetrievalOutput | None = None
     reasoning: ReasoningOutput | None = None
     critic: CriticOutput | None = None
+    final_report: "AnalysisReport | None" = None
     poisoned: bool = False
     warnings: list[str] = Field(default_factory=list)
 
