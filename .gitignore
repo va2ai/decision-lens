@@ -38,3 +38,6 @@ traces/
 # Build
 build/
 *.egg
+
+# OMC telemetry (per-machine)
+.omc/

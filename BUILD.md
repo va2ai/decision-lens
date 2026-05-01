@@ -16,34 +16,34 @@
 
 ---
 
-## Phase 1 — One agent end-to-end (1 day)
+## Phase 1 — One agent end-to-end (1 day) ✅
 
-- [ ] 6. `api/providers/llm.py` — LiteLLM wrapper with retry/timeout
-- [ ] 7. `api/prompts/intake_v1.txt`
-- [ ] 8. `api/agents/intake.py` using Instructor for structured output
-- [ ] 9. `api/agents/graph.py` — LangGraph `StateGraph` with just the Intake node + early return
-- [ ] 10. `tests/test_intake.py` — schema validation + classification accuracy
-
----
-
-## Phase 2 — Full pipeline (2–3 days)
-
-- [ ] 11. Extraction agent + prompt + span-grounding test
-- [ ] 12. Retrieval agent + ChromaDB embedded mode + `data/mock_sources/`
-- [ ] 13. Reasoning agent + prompt + citation-grounding test
-- [ ] 14. Critic agent + prompt + hallucination-injection test
-- [ ] 15. Report agent (assembly-only)
-- [ ] 16. Wire all 6 nodes in LangGraph with conditional edges
-- [ ] 17. End-to-end test on case_001
+- [x] 6. `api/providers/llm.py` — LiteLLM wrapper (Instructor + retry/timeout)
+- [x] 7. `api/prompts/intake_v1.txt`
+- [x] 8. `api/agents/intake.py` — Instructor structured output + deterministic normalize
+- [x] 9. `api/agents/graph.py` — LangGraph `StateGraph` (intake-only stub, then full DAG)
+- [x] 10. `tests/test_intake.py` — schema validation + classification accuracy
 
 ---
 
-## Phase 3 — Frontend (2 days)
+## Phase 2 — Full pipeline (2–3 days) ✅
 
-- [ ] 18. `web/` — Vite + React + TS + Tailwind + shadcn init
-- [ ] 19. Zod schemas + TanStack Query client + typed API hooks
-- [ ] 20. `AnalyzePage.tsx` — paste/upload + submit + polling
-- [ ] 21. `ResultsPage.tsx` — 5-tab scroll-spy + result components
+- [x] 11. Extraction agent + prompt + span-grounding test
+- [x] 12. Retrieval agent + ChromaDB embedded mode + `data/mock_sources/`
+- [x] 13. Reasoning agent + prompt + citation-grounding test
+- [x] 14. Critic agent + prompt + hallucination-injection test (deterministic + LLM)
+- [x] 15. Report agent (assembly-only)
+- [x] 16. Wire all 6 nodes in LangGraph with conditional edges + soft-fail nodes
+- [x] 17. End-to-end test on case_001 (39/39 tests green)
+
+---
+
+## Phase 3 — Frontend (2 days) ✅
+
+- [x] 18. `web/` — Vite + React + TS + Tailwind v4
+- [x] 19. Zod schemas mirroring Pydantic + TanStack Query client + typed API hook
+- [x] 20. `AnalyzePage.tsx` — paste/upload + submit + mutation
+- [x] 21. `ResultsPage.tsx` — 5-tab scroll-spy + IssueCard, EvidenceList, FindingsPanel, StrategyPanel, FlagsList, CitationBadge
 
 ---
 
