@@ -1,0 +1,52 @@
+DEMO REVIEW BOARD — ADMINISTRATIVE DECISION
+
+Case Number: C-000-000-001
+Claimant: Jane Demo
+Date of Decision: 2024-08-15
+
+ISSUE
+Entitlement to compensation benefits for a chronic respiratory condition claimed
+as related to occupational exposure during prior service.
+
+DECISION
+The claim for compensation benefits for chronic respiratory condition is DENIED.
+
+EVIDENCE OF RECORD
+1. Service occupational records, January 1998 through March 2004.
+2. Private medical records from Demo Memorial Clinic, dated April 2018 through
+   January 2024, documenting a diagnosis of mild chronic obstructive disease.
+3. Claimant statement dated June 2024.
+4. Demo Agency examination report dated July 2024.
+
+REASONS AND BASES FOR DECISION
+The claimant served in a covered occupation from 1998 to 2004 with documented
+exposure to airborne particulates. Service records do not document any treatment
+for or complaint of respiratory symptoms during the period of service. Private
+medical records reflect first diagnosis of a chronic respiratory condition in
+April 2018, approximately fourteen years after separation.
+
+The Demo Agency examiner opined in July 2024 that the claimant's current
+respiratory condition is "less likely than not" related to occupational exposure
+during service. The examiner stated that the more likely cause is the claimant's
+post-service occupational history, which included approximately eight years
+of work in environments with secondary smoke exposure. The examiner also noted
+that the gap between separation and first documented diagnosis weighed against
+a service-related etiology.
+
+The claimant submitted a personal statement asserting that respiratory symptoms
+began intermittently during the final year of service, but the statement is not
+corroborated by contemporaneous records or by a buddy statement from any
+co-worker or family member. No private medical opinion linking the condition
+to occupational exposure has been submitted.
+
+The preponderance of the evidence is against the claim. The benefit-of-the-doubt
+rule does not apply because the evidence is not in approximate equipoise.
+
+CONCLUSION
+Service connection for chronic respiratory condition is denied. The claimant
+may submit new and relevant evidence — including a private medical nexus
+opinion or contemporaneous lay statements from co-workers — and request
+supplemental review within one year of this decision.
+
+This is a synthetic example document used solely for testing the decision-lens
+analysis pipeline. No real persons, agencies, or claims are referenced.
