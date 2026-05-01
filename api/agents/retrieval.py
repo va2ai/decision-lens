@@ -55,5 +55,19 @@ async def run_async(extraction: ExtractionOutput, *, store: _Store, top_k: int =
 
 
 def run(extraction: ExtractionOutput, *, store: _Store, top_k: int = 3) -> RetrievalOutput:
-    """Sync entry point. Spins a private event loop so callers can be sync."""
-    return asyncio.run(run_async(extraction, store=store, top_k=top_k))
+    """Sync entry point usable from both standalone scripts and FastAPI handlers.
+
+    When the caller is itself inside a running event loop (e.g. a FastAPI async
+    endpoint), `asyncio.run` would raise. In that case we hop into a worker
+    thread that owns a private event loop. LangGraph compiles graph nodes as
+    sync functions, so the orchestrator path always lands here.
+    """
+    coro_factory = lambda: run_async(extraction, store=store, top_k=top_k)
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro_factory())
+    import concurrent.futures
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+        return ex.submit(lambda: asyncio.run(coro_factory())).result()
