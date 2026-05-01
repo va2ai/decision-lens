@@ -44,7 +44,17 @@ class StructuredClient:
         # Instructor's litellm adapter: returns a client with the same
         # chat.completions.create surface, but response_model gives us a
         # validated Pydantic instance back.
-        self._client = instructor.from_litellm(litellm_completion)
+        #
+        # Mode selection: Gemini's TOOLS mode emits multiple parallel function
+        # calls for nested schemas, which Instructor rejects with "does not
+        # support multiple tool calls". JSON mode side-steps that — the model
+        # produces a single JSON document we re-validate. Other providers stay
+        # on the default TOOLS mode where it works fine.
+        is_gemini = "gemini" in model.lower() or "vertex_ai/gemini" in model.lower()
+        self._client = instructor.from_litellm(
+            litellm_completion,
+            mode=instructor.Mode.JSON if is_gemini else instructor.Mode.TOOLS,
+        )
 
     def structured(
         self,
@@ -54,7 +64,16 @@ class StructuredClient:
         user: str,
         max_tokens: int | None = None,
     ) -> T:
-        """Call the model and return a validated instance of `response_model`."""
+        """Call the model and return a validated instance of `response_model`.
+
+        Wraps the call in an exponential-backoff retry on 429 rate-limit errors,
+        which the Gemini free tier returns at 5 req/min/project/model. The
+        pipeline makes ~4 calls per analysis — without backoff a back-to-back
+        run trips the limit. Production should use paid-tier quota.
+        """
+        # Default ceiling generous enough for the largest schema (ExtractionOutput
+        # with multi-issue lists). Gemini-flash-latest's default is ~512 which
+        # truncates JSON-mode responses mid-object and triggers max_tokens errors.
         kwargs: dict = {
             "model": self.model,
             "messages": [
@@ -65,10 +84,22 @@ class StructuredClient:
             "temperature": self.temperature,
             "max_retries": self.max_retries,
             "timeout": self.timeout_s,
+            "max_tokens": max_tokens if max_tokens is not None else 8192,
         }
-        if max_tokens is not None:
-            kwargs["max_tokens"] = max_tokens
-        return self._client.chat.completions.create(**kwargs)
+
+        import time
+
+        for attempt in range(4):
+            try:
+                return self._client.chat.completions.create(**kwargs)
+            except Exception as exc:  # noqa: BLE001
+                msg = str(exc).lower()
+                is_rate_limit = "rate" in msg or "429" in msg or "resource_exhausted" in msg
+                if not is_rate_limit or attempt == 3:
+                    raise
+                wait = 2 ** attempt * 8  # 8s, 16s, 32s — safely past the 1-min window
+                time.sleep(wait)
+        raise RuntimeError("unreachable")
 
 
 @lru_cache(maxsize=1)

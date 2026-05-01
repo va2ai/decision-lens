@@ -59,8 +59,10 @@ class DocumentIssue(BaseModel):
     issue_text: str
     decision: Literal["denied", "approved", "deferred", "unclear"]
     stated_reason: str | None = None
-    source_span: tuple[int, int] = Field(
-        description="(start, end) char offsets into normalized_text"
+    source_span: list[int] = Field(
+        description="[start, end] char offsets into normalized_text",
+        min_length=2,
+        max_length=2,
     )
     confidence: float = Field(ge=0.0, le=1.0)
 
@@ -72,7 +74,12 @@ class EvidenceItem(BaseModel):
     description: str
     source_type: Literal["document", "external_record", "lay_statement", "missing"]
     favorability: Literal["favorable", "adverse", "neutral", "missing"]
-    source_span: tuple[int, int] | None = None
+    source_span: list[int] | None = Field(
+        default=None,
+        description="[start, end] char offsets",
+        min_length=2,
+        max_length=2,
+    )
 
 
 class ExtractionOutput(BaseModel):
