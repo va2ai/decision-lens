@@ -61,7 +61,7 @@ Covered by `tests/test_pipeline_e2e.py`.
 
 `scripts/run_evals.py` runs the full pipeline against `data/golden_cases.jsonl` (five labeled cases) and exits non-zero if `pass_rate < 60%`. The deterministic scorer is exercised in isolation by `tests/test_evals.py::test_score_case` — it runs in CI without an API key.
 
-The optional Ragas wrapper activates only when (a) `OPENAI_API_KEY` or `LANGFUSE_PUBLIC_KEY` is set and (b) `pip install -e ".[evals]"` has been run. Both scorers run side-by-side when available — see `docs/eval-notes.md`.
+The optional Ragas wrapper activates only when (a) `OPENAI_API_KEY` or `LANGFUSE_PUBLIC_KEY` is set and (b) `pip install -e ".[evals]"` has been run. Both scorers run side-by-side when available — see `docs/evaluation.md`.
 
 ## 6. Span tracing is real — every run produces a trace
 
