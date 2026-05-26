@@ -67,8 +67,8 @@
 
 ## Phase 6 — Polish + ship (1 day)
 
-- [ ] 30. README polish — Mermaid diagram, demo GIF, sample output
-- [ ] 31. `docs/architecture.md`, `agent-design.md`, `evaluation.md`, `privacy.md`
-- [ ] 32. GitHub Actions CI — Ruff + pytest + run_evals on PR
-- [ ] 33. Demo GIF recording
-- [ ] 34. `LICENSE` + push to public GitHub
+- [x] 30. README polish — Mermaid diagram, hiring-language tagline, "Why this matters to employers" section, screenshots block
+- [x] 31. `docs/architecture.md`, `docs/evaluation.md`, `docs/failure-modes.md`
+- [x] 32. GitHub Actions CI — Ruff + pytest (deterministic eval scoring) + Node lint/build + optional live `run_evals` job when an LLM key secret is set
+- [ ] 33. Demo GIF recording — see `docs/img/README.md` for capture instructions
+- [x] 34. `LICENSE` + push to public GitHub

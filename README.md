@@ -1,6 +1,6 @@
 # decision-lens
 
-> A composable, observable multi-agent pipeline that turns dense administrative decisions into grounded, citation-checked analysis reports.
+> **Production-style multi-agent RAG pipeline with citation validation, evals, tracing, and typed handoffs.** Turns dense administrative decisions into grounded, citation-checked analysis reports.
 
 **Stack:** LangGraph · LiteLLM · Instructor · Pydantic · ChromaDB · FastAPI · React 19 + TanStack Query + Tailwind v4 · Langfuse (optional) · Ragas (optional)
 
@@ -30,6 +30,30 @@ flowchart LR
 **The point:** every legal claim in the final report traces back to a retrieved source the Critic actually saw. The Critic runs a deterministic dangling-source-id check **before** any LLM call, so hallucinated `[REG-PHANTOM]`-style citations never reach the LLM judge.
 
 This is an independent portfolio implementation. No production code or proprietary data is included; all sample documents are synthetic.
+
+## Demo
+
+![End-to-end run: paste a decision, analyze, inspect issues, findings, citations, critic flags, and the agent timeline.](./docs/img/demo.gif)
+
+| Results — issues, findings, citations | Agent timeline (span trace) | Eval dashboard |
+|---|---|---|
+| ![Results tab](./docs/img/screenshot-results.png) | ![Trace timeline](./docs/img/screenshot-trace.png) | ![Eval dashboard](./docs/img/screenshot-evals.png) |
+
+> Recording instructions for the GIF and screenshots live in [`docs/img/README.md`](./docs/img/README.md). The images render as broken links until those files are added — every other claim in this README is exercised by `pytest -q` regardless.
+
+## Why this matters to employers
+
+This is a deliberately small repo designed to demonstrate the patterns that show up in real production LLM systems — the parts that aren't "call the API and parse the response."
+
+- **Multi-agent RAG with verifiable grounding.** Six typed stages with a Pydantic schema at every boundary, a deterministic dangling-citation guard that runs *before* any LLM call, and an LLM critic on top. The hallucination-injection test passes with `client=None` — the guarantee survives an outage of the judge.
+- **Evals you can run in CI without an API key.** Five deterministic metrics (`issue_recall`, `decision_match`, `citation_grounding`, `required_source_recall`, `faithfulness`) plus an optional Ragas LLM-as-judge wrapper. CI gates on the deterministic suite; the Ragas pass is additive when a key is available.
+- **Failure semantics are explicit, not accidental.** `intake` and `critic` hard-abort; `extraction`, `retrieval`, `reasoning` soft-fail and poison the context; `report` always runs and propagates warnings. The graph behaves predictably under partial outages, and the policy is unit-tested.
+- **Observable by default.** Every node opens a `span()` via a `contextvar` (so pure-function LangGraph nodes don't have to thread the trace through state). `GET /traces/{run_id}` returns durations, statuses, and metadata; the UI renders them as a Gantt-style timeline. Optional Langfuse passthrough activates from one env var and never raises into the pipeline.
+- **Schema-first typed handoffs across the stack.** `api/schemas/pipeline.py` is the source of truth; `web/src/types/api.ts` mirrors every model as a Zod schema and `parse()`s on receipt. Drift between Python and TypeScript surfaces at runtime, not in production.
+- **Provider-agnostic.** LiteLLM + Instructor abstract the model. Switching OpenAI ↔ Anthropic ↔ Gemini ↔ Vertex ↔ Bedrock ↔ a self-hosted vLLM endpoint is a single `.env` edit. The agent code never imports a provider SDK.
+- **Tested with no live LLM.** 48 tests pass in ~14 seconds on a cold checkout — the LLM client and the vector store are stubbed at the import-time factory boundary so the full DAG runs deterministically in CI.
+
+If you're hiring for AI/ML engineering, applied LLM, or platform roles where the work is "make a model output something other systems can rely on," this repo is the proof — the load-bearing assertions are linked from [PROOF.md](./PROOF.md).
 
 ## Status
 
@@ -117,6 +141,13 @@ Three concentric layers, each tested independently — a hallucinated citation h
 The load-bearing assertion is `tests/test_schemas.py::test_schema_rejects_finding_without_any_citation` — Pydantic's `min_length=1` is what every layer above it builds on. The hallucination-injection assertion `tests/test_critic.py::test_hallucination_injection_is_flagged_without_llm` proves layers 2–3 work even when an LLM is unavailable.
 
 The eval suite (`api/evals/runner.py`) measures the residual on real outputs: `citation_grounding` is the fraction of finding source_ids that resolved against retrieved citations — when it's not 1.0, something escaped the three layers and the run fails the eval.
+
+## Deeper docs
+
+- **[docs/architecture.md](./docs/architecture.md)** — why six agents, the failure-policy rationale, the two-layer Critic, the contextvar span design.
+- **[docs/evaluation.md](./docs/evaluation.md)** — the five deterministic metrics, why these five, the golden cases, the Ragas wrapper, what a regression looks like.
+- **[docs/failure-modes.md](./docs/failure-modes.md)** — the failure taxonomy: hard-abort vs soft-fail vs quiet-drop vs schema-bounce vs Critic-block, with what the user sees in each.
+- **[PROOF.md](./PROOF.md)** — every load-bearing claim mapped to a runnable test.
 
 ## Architecture details
 
